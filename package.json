@@ -7,7 +7,9 @@
     "start": "node server.js",
     "serve": "node server.js",
     "compile-target": "node tools/compile-target.cjs",
-    "migrate-cloudinary": "node tools/migrate-cloudinary.cjs"
+    "migrate-cloudinary": "node tools/migrate-cloudinary.cjs",
+    "sync-config": "node tools/sync-config.cjs",
+    "rebuild-config": "node tools/rebuild-from-cloudinary.cjs"
   },
   "engines": {
     "node": "20.x"
@@ -15,13 +17,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.2",
     "cloudinary": "^2.10.0",
     "dotenv": "^17.4.2",
     "express": "^4.22.2",
     "express-session": "^1.19.0",
+    "mind-ar": "^1.2.5",
     "multer": "^1.4.5-lts.1",
     "puppeteer": "^24.36.1",
     "streamifier": "^0.1.1"
-  },
-  "devDependencies": {}
+  }
 }

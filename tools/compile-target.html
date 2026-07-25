@@ -59,6 +59,7 @@
 
           status.textContent = "Done! targets.mind downloaded — move it to assets/targets.mind";
         } catch (err) {
+          window.__MIND_COMPILE_ERROR__ = err.message;
           status.textContent = "Error: " + err.message;
           console.error(err);
         }

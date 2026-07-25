@@ -102,7 +102,9 @@ app.post(
     { name: "video", maxCount: 1 },
   ]),
   async (req, res) => {
+    const started = Date.now();
     try {
+      console.log("[admin] Add target — receiving upload…");
       const targetFile = req.files?.target?.[0];
       const videoFile = req.files?.video?.[0];
       const name = (req.body?.name || "").trim();
@@ -119,6 +121,7 @@ app.post(
         return res.status(400).json({ error: "Upload an MP4 or WebM video" });
       }
 
+      console.log("[admin] Uploading to Cloudinary & compiling .mind…");
       let config = await configStore.readConfig();
       config = await targetsService.addTarget(config, {
         name,
@@ -127,6 +130,7 @@ app.post(
       });
       await configStore.writeConfig(config);
 
+      console.log(`[admin] Target added in ${Math.round((Date.now() - started) / 1000)}s`);
       res.json({
         ok: true,
         config,
@@ -161,9 +165,11 @@ async function start() {
   try {
     configStore.clearCache();
     const config = await configStore.readConfig();
-    if (cloudinary.isConfigured()) {
+    if (cloudinary.isConfigured() && config.targets.length > 0) {
       await configStore.writeConfig(config);
       console.log("Config synced to Cloudinary");
+    } else if (config.targets.length === 0) {
+      console.warn("No AR targets configured — add targets at /admin/");
     }
   } catch (err) {
     console.warn("Startup config sync warning:", err.message);

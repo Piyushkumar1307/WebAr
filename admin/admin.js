@@ -52,10 +52,27 @@
   }
 
   async function api(url, options = {}) {
-    const res = await fetch(url, { credentials: "same-origin", ...options });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "Request failed");
-    return data;
+    const controller = new AbortController();
+    const timeoutMs = options.timeoutMs ?? 300000;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, {
+        credentials: "same-origin",
+        signal: controller.signal,
+        ...options,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      return data;
+    } catch (err) {
+      if (err.name === "AbortError") {
+        throw new Error("Request timed out — compilation can take up to 3 minutes. Check server logs.");
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   function openSidebar() {
@@ -192,7 +209,7 @@
     if (!pendingTarget || !pendingVideo) return;
 
     addSubmit.disabled = true;
-    setStatus(addStatus, "Uploading & compiling (may take ~30s)…", "");
+    setStatus(addStatus, "Uploading & compiling (may take 1–3 min)…", "");
 
     const form = new FormData();
     form.append("name", targetNameInput.value.trim());
@@ -200,7 +217,7 @@
     form.append("video", pendingVideo);
 
     try {
-      const data = await api("/api/admin/targets", { method: "POST", body: form });
+      const data = await api("/api/admin/targets", { method: "POST", body: form, timeoutMs: 300000 });
       config = data.config;
       resetAddForm();
       setStatus(addStatus, data.message, "ok");

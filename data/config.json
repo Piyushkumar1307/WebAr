@@ -1,16 +1,16 @@
 {
-  "mindFile": "https://res.cloudinary.com/ddph6chua/raw/upload/v1784952607/webar/mind/targets",
+  "mindFile": "https://res.cloudinary.com/ddph6chua/raw/upload/v1784959396/webar/mind/targets",
   "targets": [
     {
-      "id": "legacy-0",
+      "id": "c0da7e74",
       "name": "Target 1",
-      "targetImage": "https://res.cloudinary.com/ddph6chua/image/upload/v1784952604/webar/targets/target.png",
-      "video": "https://res.cloudinary.com/ddph6chua/video/upload/v1784952626/webar/videos/ar-video.mp4",
+      "targetImage": "https://res.cloudinary.com/ddph6chua/image/upload/v1784959394/webar/targets/c0da7e74.png",
+      "video": "https://res.cloudinary.com/ddph6chua/video/upload/v1784959402/webar/videos/c0da7e74.mp4",
       "planeWidth": 1,
       "planeHeight": 1,
       "targetIndex": 0,
-      "createdAt": "2026-07-25T04:35:20.858Z"
+      "createdAt": "2026-07-25T06:03:24.399Z"
     }
   ],
-  "updatedAt": "2026-07-25T04:39:42.523Z"
+  "updatedAt": "2026-07-25T06:03:24.400Z"
 }
