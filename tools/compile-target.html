@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Compile target5 → targets.mind</title>
+    <script>
+      window.AFRAME = {
+        registerSystem() {},
+        registerComponent() {},
+        THREE: { Matrix4: function () { this.set = function () {}; this.compose = function () {}; this.multiply = function () {}; this.elements = []; } },
+      };
+    </script>
+    <script src="/tools/lib/mindar-image-aframe.prod.js"></script>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 480px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Compile AR Target</h1>
+    <p id="status">Loading compiler…</p>
+    <script>
+      (async () => {
+        const status = document.getElementById("status");
+        try {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          const params = new URLSearchParams(location.search);
+          const imagePath = params.get("image") || "/assets/target5.png";
+          img.src = imagePath;
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+
+          status.textContent = "Compiling target5.png (may take ~30s)…";
+          const compiler = new MINDAR.IMAGE.Compiler();
+          await compiler.compileImageTargets([img], (p) => {
+            status.textContent = `Compiling… ${Math.round(p)}%`;
+          });
+
+          const buffer = compiler.exportData();
+          window.__MIND_BUFFER__ = Array.from(new Uint8Array(buffer));
+
+          const blob = new Blob([buffer]);
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "targets.mind";
+          a.click();
+
+          status.textContent = "Done! targets.mind downloaded — move it to assets/targets.mind";
+        } catch (err) {
+          status.textContent = "Error: " + err.message;
+          console.error(err);
+        }
+      })();
+    </script>
+  </body>
+</html>

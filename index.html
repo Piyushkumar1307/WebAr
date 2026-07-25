@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>WebAR — Scan & Play Video</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <script src="js/ar-video.js"></script>
+  </head>
+  <body>
+    <div id="loading-screen" class="screen">
+      <div class="start-content">
+        <p class="start-desc">Loading AR experience…</p>
+      </div>
+    </div>
+
+    <div id="start-screen" class="screen hidden">
+      <div class="start-content">
+        <div class="logo" aria-hidden="true">📷</div>
+        <h1>WebAR Scanner</h1>
+        <p id="start-desc" class="start-desc">Point your camera at the target image to play the video in AR.</p>
+        <button id="start-btn" type="button">Start Scanner</button>
+        <p class="hint">Camera access is required.<br />Best on Chrome (Android) or Safari (iOS).</p>
+      </div>
+    </div>
+
+    <div id="scanner-ui" class="screen hidden" aria-live="polite">
+      <div class="scanner-frame" aria-hidden="true">
+        <span class="corner tl"></span>
+        <span class="corner tr"></span>
+        <span class="corner bl"></span>
+        <span class="corner br"></span>
+        <div class="scan-line"></div>
+      </div>
+      <div class="scanner-text">
+        <p id="scanner-status">Scanning for target…</p>
+        <p class="scanner-tip">Keep the target flat, well lit, and in the frame</p>
+      </div>
+    </div>
+
+    <div id="found-badge" class="hidden" role="status">
+      <span class="pulse" aria-hidden="true"></span>
+      <span class="badge-text">Target detected</span>
+    </div>
+
+    <button id="unmute-btn" type="button" class="hidden" aria-label="Tap to enable sound">
+      🔊 Tap for sound
+    </button>
+
+    <div id="toast" class="toast hidden" role="alert"></div>
+
+    <div id="ar-container" class="ar-container"></div>
+
+    <script src="js/app.js"></script>
+  </body>
+</html>
