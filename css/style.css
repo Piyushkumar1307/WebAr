@@ -14,8 +14,8 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --pad-x: max(16px, var(--safe-left), var(--safe-right));
+  --bg: #12121a;
   --accent: #667eea;
-  --accent-2: #764ba2;
 }
 
 @supports (height: 100dvh) {
@@ -37,7 +37,7 @@ body {
   overscroll-behavior: none;
   touch-action: manipulation;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #000;
+  background: var(--bg);
   color: #fff;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -70,7 +70,7 @@ body {
   min-height: -webkit-fill-available;
   overflow: hidden;
   z-index: 1;
-  background: #000;
+  background: var(--bg);
 }
 
 .ar-container a-scene {
@@ -100,7 +100,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0f0c29;
+  background: var(--bg);
 }
 
 #loading-screen .start-desc {
@@ -112,7 +112,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  background: var(--bg);
   padding-left: max(20px, var(--safe-left));
   padding-right: max(20px, var(--safe-right));
 }
@@ -124,10 +124,24 @@ body {
   padding: 0 4px;
 }
 
-.logo {
-  font-size: clamp(48px, 14vw, 64px);
-  margin-bottom: 12px;
-  line-height: 1;
+#start-btn {
+  width: 100%;
+  min-height: 52px;
+  padding: 16px 24px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+#start-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  opacity: 0.92;
 }
 
 .start-content h1 {
@@ -144,37 +158,9 @@ body {
   margin-bottom: 24px;
 }
 
-#start-btn {
-  width: 100%;
-  min-height: 52px;
-  padding: 16px 24px;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-  border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  touch-action: manipulation;
-  transition: transform 0.15s, opacity 0.15s;
-  box-shadow: 0 8px 28px rgba(102, 126, 234, 0.45);
-}
-
-#start-btn:active:not(:disabled) {
-  transform: scale(0.98);
-  opacity: 0.92;
-}
-
 #start-btn:disabled {
   opacity: 0.65;
   cursor: wait;
-}
-
-.hint {
-  margin-top: 18px;
-  font-size: clamp(0.75rem, 3.2vw, 0.85rem);
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.45);
 }
 
 /* ── Scanner overlay ── */
@@ -238,8 +224,8 @@ body {
   left: 6%;
   right: 6%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
-  box-shadow: 0 0 14px var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.6);
   animation: scan 2.4s ease-in-out infinite;
 }
 
@@ -372,11 +358,6 @@ body {
 
   .start-content {
     padding: 8px 0 16px;
-  }
-
-  .logo {
-    font-size: 40px;
-    margin-bottom: 8px;
   }
 
   .start-content h1 {

@@ -8,7 +8,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #0f1117;
+  background: #12121a;
   color: #e8eaed;
   min-height: 100vh;
 }
@@ -32,6 +32,10 @@ body {
   border: 1px solid #2a2f3d;
   border-radius: 16px;
   padding: 24px;
+}
+
+.login-card {
+  background: #1a1d27;
 }
 
 h1 {
@@ -69,7 +73,7 @@ input[type="password"] {
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid #3c4043;
-  background: #0f1117;
+  background: #12121a;
   color: #fff;
   margin-bottom: 16px;
   font-size: 1rem;
@@ -92,7 +96,7 @@ button,
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #667eea;
   color: #fff;
 }
 
@@ -112,7 +116,7 @@ button[type="submit"],
   padding: 13px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #667eea;
   color: #fff;
   font-weight: 600;
   font-size: 1rem;
@@ -162,7 +166,7 @@ button[type="submit"],
 }
 
 .preview-box {
-  background: #0f1117;
+  background: #12121a;
   border: 1px dashed #3c4043;
   border-radius: 12px;
   min-height: 180px;
@@ -206,7 +210,7 @@ form {
 }
 
 pre {
-  background: #0f1117;
+  background: #12121a;
   border-radius: 10px;
   padding: 16px;
   overflow: auto;
