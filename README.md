@@ -186,7 +186,19 @@ CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 CLOUDINARY_FOLDER=webar
+PUPPETEER_CACHE_DIR=/opt/render/project/src/.cache/puppeteer
 ```
+
+Adding targets in the admin panel compiles a `.mind` file via **Puppeteer + Chrome**. On Render:
+
+1. Use the included `render.yaml` (build installs Chrome automatically), **or** set your build command to:
+   ```bash
+   npm install && npx puppeteer browsers install chrome
+   ```
+2. Set `PUPPETEER_CACHE_DIR` as above so Chrome is stored inside the project and available at runtime.
+3. After updating Puppeteer settings, do **Manual Deploy → Clear build cache & deploy** once so Chrome is reinstalled.
+
+If uploads fail with “Could not find Chrome”, clear the build cache and redeploy.
 
 After deploy:
 - Scanner: `https://your-app.onrender.com/`

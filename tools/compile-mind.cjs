@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
+const { ensureChrome } = require("../scripts/ensure-chrome.cjs");
 
 const ROOT = path.join(__dirname, "..");
 const MIME = {
@@ -58,10 +59,19 @@ async function compileMindMulti(imagePaths, outputPath) {
   });
 
   try {
+    const executablePath = ensureChrome();
     const puppeteer = require("puppeteer");
     const browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--use-gl=angle", "--use-angle=swiftshader"],
+      headless: true,
+      executablePath,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+      ],
     });
     const page = await browser.newPage();
     page.setDefaultTimeout(180000);
