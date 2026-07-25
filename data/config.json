@@ -1,8 +1,16 @@
 {
-  "targetImage": "https://res.cloudinary.com/ddph6chua/image/upload/v1784952604/webar/targets/target.png",
   "mindFile": "https://res.cloudinary.com/ddph6chua/raw/upload/v1784952607/webar/mind/targets",
-  "video": "https://res.cloudinary.com/ddph6chua/video/upload/v1784952626/webar/videos/ar-video.mp4",
-  "planeWidth": 1,
-  "planeHeight": 1,
-  "updatedAt": "2026-07-25T04:10:27.715Z"
+  "targets": [
+    {
+      "id": "legacy-0",
+      "name": "Target 1",
+      "targetImage": "https://res.cloudinary.com/ddph6chua/image/upload/v1784952604/webar/targets/target.png",
+      "video": "https://res.cloudinary.com/ddph6chua/video/upload/v1784952626/webar/videos/ar-video.mp4",
+      "planeWidth": 1,
+      "planeHeight": 1,
+      "targetIndex": 0,
+      "createdAt": "2026-07-25T04:35:20.858Z"
+    }
+  ],
+  "updatedAt": "2026-07-25T04:39:42.523Z"
 }

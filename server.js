@@ -1,13 +1,12 @@
 require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
 const express = require("express");
 const multer = require("multer");
 const session = require("express-session");
-const { compileMind } = require("./tools/compile-mind.cjs");
 const cloudinary = require("./lib/cloudinary-storage");
 const configStore = require("./lib/config-store");
+const targetsService = require("./lib/targets-service");
 
 const ROOT = __dirname;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
@@ -33,33 +32,6 @@ app.use(
   })
 );
 
-function imageDimensions(buf) {
-  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e) {
-    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
-  }
-  if (buf[0] === 0xff && buf[1] === 0xd8) {
-    let i = 2;
-    while (i < buf.length) {
-      if (buf[i] !== 0xff) break;
-      const marker = buf[i + 1];
-      const len = buf.readUInt16BE(i + 2);
-      if ([0xc0, 0xc1, 0xc2].includes(marker)) {
-        return { height: buf.readUInt16BE(i + 5), width: buf.readUInt16BE(i + 7) };
-      }
-      i += 2 + len;
-    }
-  }
-  throw new Error("Unsupported image format. Use PNG or JPG.");
-}
-
-function planeSize(width, height) {
-  const aspect = width / height;
-  if (aspect >= 1) {
-    return { planeWidth: 1, planeHeight: 1 / aspect };
-  }
-  return { planeWidth: aspect, planeHeight: 1 };
-}
-
 function requireAdmin(req, res, next) {
   if (req.session?.admin) return next();
   res.status(401).json({ error: "Unauthorized" });
@@ -68,7 +40,7 @@ function requireAdmin(req, res, next) {
 function requireCloudinary(_req, res, next) {
   if (!cloudinary.isConfigured()) {
     return res.status(503).json({
-      error: "Cloudinary not configured. Set CLOUDINARY_* environment variables on Render.",
+      error: "Cloudinary not configured. Set CLOUDINARY_* environment variables.",
     });
   }
   next();
@@ -112,93 +84,84 @@ app.get("/api/admin/status", async (req, res) => {
   }
 });
 
+app.get("/api/admin/targets", requireAdmin, async (_req, res) => {
+  try {
+    const config = await configStore.readConfig();
+    res.json({ targets: config.targets, mindFile: config.mindFile });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post(
-  "/api/admin/upload-target",
+  "/api/admin/targets",
   requireAdmin,
   requireCloudinary,
-  upload.single("target"),
+  upload.fields([
+    { name: "target", maxCount: 1 },
+    { name: "video", maxCount: 1 },
+  ]),
   async (req, res) => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "webar-"));
     try {
-      if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+      const targetFile = req.files?.target?.[0];
+      const videoFile = req.files?.video?.[0];
+      const name = (req.body?.name || "").trim();
 
-      const allowed = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-      if (!allowed.includes(req.file.mimetype)) {
+      if (!targetFile) return res.status(400).json({ error: "Target image is required" });
+      if (!videoFile) return res.status(400).json({ error: "Video is required" });
+
+      const allowedImg = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+      const allowedVid = ["video/mp4", "video/webm", "video/quicktime"];
+      if (!allowedImg.includes(targetFile.mimetype)) {
         return res.status(400).json({ error: "Upload a PNG or JPG image" });
       }
+      if (!allowedVid.includes(videoFile.mimetype)) {
+        return res.status(400).json({ error: "Upload an MP4 or WebM video" });
+      }
 
-      const ext = req.file.mimetype === "image/png" ? ".png" : ".jpg";
-      const tmpImage = path.join(tmpDir, "target" + ext);
-      const tmpMind = path.join(tmpDir, "targets.mind");
-
-      fs.writeFileSync(tmpImage, req.file.buffer);
-
-      const { width, height } = imageDimensions(req.file.buffer);
-      const { planeWidth, planeHeight } = planeSize(width, height);
-
-      await compileMind(tmpImage, tmpMind);
-
-      const [imageResult, mindResult] = await Promise.all([
-        cloudinary.uploadImage(req.file.buffer, "target"),
-        cloudinary.uploadMind(fs.readFileSync(tmpMind), "targets"),
-      ]);
-
-      const config = await configStore.readConfig();
-      config.targetImage = imageResult.secure_url;
-      config.mindFile = mindResult.secure_url;
-      config.planeWidth = planeWidth;
-      config.planeHeight = planeHeight;
+      let config = await configStore.readConfig();
+      config = await targetsService.addTarget(config, {
+        name,
+        imageBuffer: targetFile.buffer,
+        videoBuffer: videoFile.buffer,
+      });
       await configStore.writeConfig(config);
 
       res.json({
         ok: true,
         config,
-        message: "Target uploaded to Cloudinary and compiled successfully",
+        message: `"${name || "New target"}" added successfully`,
       });
     } catch (err) {
-      console.error("Upload target error:", err);
-      res.status(500).json({ error: err.message || "Failed to process target image" });
-    } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      console.error("Add target error:", err);
+      res.status(500).json({ error: err.message || "Failed to add target" });
     }
   }
 );
 
-app.post(
-  "/api/admin/upload-video",
-  requireAdmin,
-  requireCloudinary,
-  upload.single("video"),
-  async (req, res) => {
-    try {
-      if (!req.file) return res.status(400).json({ error: "No video uploaded" });
+app.delete("/api/admin/targets/:id", requireAdmin, requireCloudinary, async (req, res) => {
+  try {
+    let config = await configStore.readConfig();
+    const target = config.targets.find((t) => t.id === req.params.id);
+    if (!target) return res.status(404).json({ error: "Target not found" });
 
-      const allowed = ["video/mp4", "video/webm", "video/quicktime"];
-      if (!allowed.includes(req.file.mimetype)) {
-        return res.status(400).json({ error: "Upload an MP4 or WebM video" });
-      }
+    config = await targetsService.deleteTarget(config, req.params.id);
+    await configStore.writeConfig(config);
 
-      const result = await cloudinary.uploadVideo(req.file.buffer, "ar-video");
-
-      const config = await configStore.readConfig();
-      config.video = result.secure_url;
-      await configStore.writeConfig(config);
-
-      res.json({ ok: true, config, message: "Video uploaded to Cloudinary successfully" });
-    } catch (err) {
-      console.error("Upload video error:", err);
-      res.status(500).json({ error: err.message || "Failed to upload video" });
-    }
+    res.json({ ok: true, config, message: `"${target.name}" deleted` });
+  } catch (err) {
+    console.error("Delete target error:", err);
+    res.status(500).json({ error: err.message || "Failed to delete target" });
   }
-);
+});
 
 app.use(express.static(ROOT));
 
 async function start() {
   try {
-    await configStore.readConfig();
+    configStore.clearCache();
+    const config = await configStore.readConfig();
     if (cloudinary.isConfigured()) {
-      const config = await configStore.readConfig();
       await configStore.writeConfig(config);
       console.log("Config synced to Cloudinary");
     }

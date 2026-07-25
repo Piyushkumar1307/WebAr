@@ -36,13 +36,18 @@ function createStaticServer() {
 }
 
 /**
- * Compile a PNG/JPG target image into a MindAR .mind file.
- * @param {string} imagePath absolute path to source image
- * @param {string} outputPath absolute path for .mind output
+ * Compile one or more target images into a MindAR .mind file.
+ * @param {string|string[]} imagePaths
+ * @param {string} outputPath
  */
-async function compileMind(imagePath, outputPath) {
-  const relImage = path.relative(ROOT, imagePath).split(path.sep).join("/");
-  const imageUrl = "/" + relImage;
+async function compileMindMulti(imagePaths, outputPath) {
+  const paths = Array.isArray(imagePaths) ? imagePaths : [imagePaths];
+  const imageUrls = paths
+    .map((p) => {
+      const rel = path.relative(ROOT, p).split(path.sep).join("/");
+      return "/" + rel;
+    })
+    .join(",");
 
   const server = createStaticServer();
   const port = 8700 + Math.floor(Math.random() * 200);
@@ -61,7 +66,7 @@ async function compileMind(imagePath, outputPath) {
     const page = await browser.newPage();
     page.setDefaultTimeout(180000);
 
-    const compileUrl = `http://127.0.0.1:${port}/tools/compile-target.html?image=${encodeURIComponent(imageUrl)}`;
+    const compileUrl = `http://127.0.0.1:${port}/tools/compile-target.html?images=${encodeURIComponent(imageUrls)}`;
     await page.goto(compileUrl, { waitUntil: "networkidle0" });
     await page.waitForFunction(() => window.__MIND_BUFFER__, { timeout: 180000 });
 
@@ -76,4 +81,8 @@ async function compileMind(imagePath, outputPath) {
   }
 }
 
-module.exports = { compileMind };
+async function compileMind(imagePath, outputPath) {
+  return compileMindMulti([imagePath], outputPath);
+}
+
+module.exports = { compileMind, compileMindMulti };

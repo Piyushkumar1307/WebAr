@@ -35,41 +35,121 @@ npm run migrate-cloudinary
 
 ## Admin panel
 
-Manage the target image and video at **http://localhost:3000/admin/**
+The admin panel lets you manage **multiple AR targets** — each with its own image and video — without replacing existing ones.
 
-- Default password: `admin123` (change with `ADMIN_PASSWORD` env variable)
-- Upload a new **target image** → compiled and stored on Cloudinary
-- Upload a new **video** → stored on Cloudinary (with sound when target is detected)
+**URL:** `http://localhost:3000/admin/` (or `https://your-domain.com/admin/` in production)
+
+### Sign in
+
+Default password: `admin123`
+
+Set a secure password via environment variable:
 
 ```bash
 ADMIN_PASSWORD=your-secure-password npm start
 ```
 
+Also set `SESSION_SECRET` in production (e.g. `openssl rand -hex 32`).
+
+### Layout
+
+| Area | Description |
+|------|-------------|
+| **Sidebar** | Lists all targets with thumbnail, name, and date |
+| **Add panel** | Upload a new target image + AR video together |
+| **Detail panel** | Preview a target's image/video and delete it |
+
+On **mobile**, tap the ☰ menu to open the sidebar as a slide-out drawer. On **desktop** (≥900px), the sidebar stays visible.
+
+### Add a new target
+
+1. Sign in to the admin panel
+2. Tap **+ Add target** in the sidebar
+3. Enter an optional **name** (e.g. "AYZEN Poster")
+4. Choose a **target image** (PNG, JPG, or WebP — high contrast works best)
+5. Choose an **AR video** (MP4, WebM, or MOV)
+6. Tap **Add target & video**
+
+The server uploads both files to Cloudinary, compiles a combined `.mind` tracking file for all targets, and updates the scanner automatically. Compilation may take ~30 seconds.
+
+### View or delete a target
+
+1. Tap any target in the sidebar
+2. Preview its image and video in the detail panel
+3. Tap **Delete** to remove it (remaining targets are recompiled)
+
+### How it works
+
+- Each target gets a unique ID and a `targetIndex` in the shared MindAR file
+- When the scanner detects a target, it plays **that target's video** with sound
+- Adding or deleting a target recompiles the `.mind` file — no manual steps needed
+- Config is stored in `data/config.json` locally and synced to Cloudinary on Render
+
+### Config format
+
+```json
+{
+  "mindFile": "https://res.cloudinary.com/.../webar/mind/targets",
+  "targets": [
+    {
+      "id": "abc12345",
+      "name": "AYZEN Poster",
+      "targetImage": "https://res.cloudinary.com/.../webar/targets/abc12345",
+      "video": "https://res.cloudinary.com/.../webar/videos/abc12345",
+      "planeWidth": 1,
+      "planeHeight": 1,
+      "targetIndex": 0,
+      "createdAt": "2026-07-25T04:10:27.715Z"
+    }
+  ],
+  "updatedAt": "2026-07-25T04:10:27.715Z"
+}
+```
+
+### Admin API
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/api/admin/login` | Sign in (`{ "password": "..." }`) |
+| `POST` | `/api/admin/logout` | Sign out |
+| `GET` | `/api/admin/status` | Auth status + full config |
+| `GET` | `/api/admin/targets` | List targets |
+| `POST` | `/api/admin/targets` | Add target (multipart: `name`, `target`, `video`) |
+| `DELETE` | `/api/admin/targets/:id` | Delete target by ID |
+
+Public scanner config: `GET /api/config`
+
 ## Project structure
 
 ```
 WebAR/
-├── server.js           # Express server + admin API
-├── index.html          # AR scanner (loads config from API)
-├── admin/              # Admin panel
-├── data/config.json    # Current target + video paths
+├── server.js              # Express server + admin API
+├── index.html             # AR scanner (loads config from API)
+├── admin/
+│   ├── index.html         # Admin panel UI
+│   ├── admin.css          # Sidebar + mobile layout
+│   └── admin.js           # Target list, add, delete
+├── lib/
+│   ├── config-store.js    # Read/write config (local + Cloudinary)
+│   ├── targets-service.js # Add/delete targets, recompile .mind
+│   └── cloudinary-storage.js
+├── data/config.json       # targets[] + mindFile (synced to Cloudinary)
 ├── css/style.css
-├── js/app.js
-└── assets/
-    ├── target5.png     # AR target image
-    ├── targets.mind    # Compiled tracking file
-    └── video.mp4       # AR video
+├── js/app.js              # Multi-target AR scanner
+└── assets/                # Local fallback assets
 ```
 
 ## Replace with your own content
 
+The easiest way is through the **admin panel** — upload a target image and video there. The server handles Cloudinary upload and `.mind` compilation automatically.
+
+For manual/local development without the admin panel:
+
 ### 1. Choose a target image
 
-Use `assets/target5.png` or replace it with your own image (high contrast, lots of detail).
+Use a high-contrast image with rich detail (posters, logos, packaging).
 
 ### 2. Compile the `.mind` file
-
-If you change the target image, recompile:
 
 ```bash
 npm run compile-target
@@ -79,17 +159,9 @@ Or use the [MindAR Image Compiler](https://hiukim.github.io/mind-ar-js-doc/tools
 
 ### 3. Add your video
 
-Place your MP4 file at `assets/video.mp4`.
+Place your MP4 at `assets/video.mp4`, then run `npm run migrate-cloudinary` to push assets to Cloudinary.
 
-### 4. Adjust video size on the target
-
-In `index.html`, tweak the `<a-video>` dimensions to match your target aspect ratio:
-
-```html
-<a-plane width="1" height="1" ...></a-plane>
-```
-
-(`target5.png` is square — use equal width and height.)
+Video plane size is calculated automatically from the target image aspect ratio when using the admin panel.
 
 ## Tips for best tracking
 
@@ -100,4 +172,24 @@ In `index.html`, tweak the `<a-video>` dimensions to match your target aspect ra
 
 ## Deploy
 
-Host the folder on any static host (Netlify, Vercel, GitHub Pages). **HTTPS is required** for camera access on mobile.
+This app requires a **Node.js server** (Express) — it is not a static-only site. Deploy to [Render](https://render.com), Railway, Fly.io, or any Node host.
+
+**HTTPS is required** for camera access on mobile.
+
+### Environment variables (production)
+
+```bash
+NODE_ENV=production
+ADMIN_PASSWORD=your-secure-password
+SESSION_SECRET=your-random-secret
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+CLOUDINARY_FOLDER=webar
+```
+
+After deploy:
+- Scanner: `https://your-app.onrender.com/`
+- Admin: `https://your-app.onrender.com/admin/`
+
+A `render.yaml` is included for one-click Render deployment.

@@ -2,15 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#12121a" />
     <title>WebAR Admin</title>
     <link rel="stylesheet" href="admin.css" />
   </head>
   <body>
+    <!-- Login -->
     <div id="login-view" class="view">
       <div class="card login-card">
         <h1>WebAR Admin</h1>
-        <p class="subtitle">Sign in to manage target image and video</p>
+        <p class="subtitle">Sign in to manage AR targets</p>
         <form id="login-form">
           <label for="password">Password</label>
           <input id="password" type="password" autocomplete="current-password" required />
@@ -21,53 +23,94 @@
       </div>
     </div>
 
+    <!-- Dashboard -->
     <div id="dashboard-view" class="view hidden">
-      <header class="header">
-        <div>
-          <h1>WebAR Admin</h1>
-          <p class="subtitle">Manage AR content</p>
-        </div>
-        <div class="header-actions">
-          <a href="/" class="btn-secondary">Open scanner</a>
-          <button id="logout-btn" type="button" class="btn-secondary">Logout</button>
-        </div>
-      </header>
+      <div class="admin-shell">
+        <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
 
-      <main class="grid">
-        <section class="card">
-          <h2>Target image</h2>
-          <p class="help">Upload a high-contrast image with detail. It will be compiled for AR tracking.</p>
-          <div class="preview-box">
-            <img id="target-preview" alt="Current target" />
+        <aside id="sidebar" class="sidebar">
+          <div class="sidebar-header">
+            <h1>WebAR</h1>
+            <p class="subtitle">Targets</p>
           </div>
-          <form id="target-form">
-            <input id="target-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
-            <button type="button" id="target-pick" class="btn-primary">Choose image</button>
-            <button type="submit" id="target-submit" class="btn-primary" disabled>Upload & compile</button>
-          </form>
-          <p id="target-status" class="status"></p>
-        </section>
 
-        <section class="card">
-          <h2>AR video</h2>
-          <p class="help">Upload MP4/WebM. Sound plays when the target is detected (after user taps Start on scanner).</p>
-          <div class="preview-box video-preview">
-            <video id="video-preview" controls playsinline></video>
+          <button id="sidebar-add-btn" type="button" class="btn-primary sidebar-add">+ Add target</button>
+
+          <div id="target-list" class="target-list"></div>
+
+          <div class="sidebar-footer">
+            <a href="/" class="btn-secondary sidebar-link">Open scanner</a>
+            <button id="logout-btn" type="button" class="btn-secondary">Logout</button>
           </div>
-          <form id="video-form">
-            <input id="video-input" type="file" accept="video/mp4,video/webm,video/quicktime" hidden />
-            <button type="button" id="video-pick" class="btn-primary">Choose video</button>
-            <button type="submit" id="video-submit" class="btn-primary" disabled>Upload video</button>
-          </form>
-          <p id="video-status" class="status"></p>
-        </section>
+        </aside>
 
-        <section class="card full">
-          <h2>Current config</h2>
-          <pre id="config-display"></pre>
-          <p class="help">Last updated: <span id="updated-at">—</span></p>
-        </section>
-      </main>
+        <main class="main-panel">
+          <header class="topbar">
+            <button id="sidebar-toggle" type="button" class="icon-btn" aria-label="Open menu">☰</button>
+            <h2 id="panel-title">Add new target</h2>
+          </header>
+
+          <!-- Add form -->
+          <section id="add-panel" class="panel card">
+            <p class="help">Upload a target image and its AR video together. Each pair is added without replacing existing ones.</p>
+            <form id="add-form">
+              <label for="target-name">Name</label>
+              <input id="target-name" type="text" placeholder="e.g. AYZEN Poster" maxlength="60" />
+
+              <label>Target image</label>
+              <div class="file-row">
+                <input id="add-target-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+                <button type="button" id="add-target-pick" class="btn-secondary">Choose image</button>
+                <span id="add-target-label" class="file-label">No file chosen</span>
+              </div>
+              <div class="preview-box" id="add-target-preview-wrap">
+                <img id="add-target-preview" alt="" class="hidden" />
+                <span class="preview-placeholder">Image preview</span>
+              </div>
+
+              <label>AR video</label>
+              <div class="file-row">
+                <input id="add-video-input" type="file" accept="video/mp4,video/webm,video/quicktime" hidden />
+                <button type="button" id="add-video-pick" class="btn-secondary">Choose video</button>
+                <span id="add-video-label" class="file-label">No file chosen</span>
+              </div>
+              <div class="preview-box video-preview" id="add-video-preview-wrap">
+                <video id="add-video-preview" controls playsinline class="hidden"></video>
+                <span class="preview-placeholder">Video preview</span>
+              </div>
+
+              <button type="submit" id="add-submit" class="btn-primary full-width" disabled>Add target & video</button>
+            </form>
+            <p id="add-status" class="status"></p>
+          </section>
+
+          <!-- Detail view -->
+          <section id="detail-panel" class="panel card hidden">
+            <div class="detail-header">
+              <div>
+                <h3 id="detail-name">—</h3>
+                <p id="detail-meta" class="help"></p>
+              </div>
+              <button id="delete-btn" type="button" class="btn-danger">Delete</button>
+            </div>
+            <div class="detail-grid">
+              <div>
+                <p class="label-sm">Target image</p>
+                <div class="preview-box">
+                  <img id="detail-target-img" alt="Target" />
+                </div>
+              </div>
+              <div>
+                <p class="label-sm">AR video</p>
+                <div class="preview-box video-preview">
+                  <video id="detail-video" controls playsinline></video>
+                </div>
+              </div>
+            </div>
+            <p id="detail-status" class="status"></p>
+          </section>
+        </main>
+      </div>
     </div>
 
     <script src="admin.js"></script>

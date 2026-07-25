@@ -10,14 +10,13 @@
   const toast = document.getElementById("toast");
 
   let arScene = null;
-  let imageTarget = null;
-  let videoPlane = null;
-  let videoEl = null;
   let config = null;
   let arStarted = false;
   let arSystem = null;
   let toastTimer = null;
-  let audioUnlocked = false;
+  let activeTargetIndex = null;
+  const videoEls = [];
+  const videoPlanes = [];
 
   function cacheBust(url) {
     const v = config?.updatedAt || Date.now();
@@ -66,34 +65,48 @@
     camVideo.play().catch(() => {});
   }
 
-  async function unlockAudio() {
-    if (!videoEl) return;
-    videoEl.muted = false;
-    videoEl.volume = 1;
-    try {
-      await videoEl.play();
-      videoEl.pause();
-      videoEl.currentTime = 0;
-      audioUnlocked = true;
-      unmuteBtn.classList.add("hidden");
-    } catch (_) {
-      audioUnlocked = false;
+  async function unlockAllVideos() {
+    for (const video of videoEls) {
+      video.muted = false;
+      video.volume = 1;
+      try {
+        await video.play();
+        video.pause();
+        video.currentTime = 0;
+      } catch (_) {
+        video.muted = true;
+      }
     }
   }
 
-  async function playVideoWithSound() {
-    if (!videoEl) return;
-    videoEl.muted = false;
-    videoEl.volume = 1;
-    videoPlane.setAttribute("visible", true);
+  function pauseAllVideos() {
+    videoEls.forEach((v) => {
+      v.pause();
+      v.currentTime = 0;
+    });
+    videoPlanes.forEach((p) => p.setAttribute("visible", false));
+    unmuteBtn.classList.add("hidden");
+    activeTargetIndex = null;
+  }
+
+  async function playVideoAt(index) {
+    const video = videoEls[index];
+    const plane = videoPlanes[index];
+    if (!video || !plane) return;
+
+    pauseAllVideos();
+    activeTargetIndex = index;
+    plane.setAttribute("visible", true);
+    video.muted = false;
+    video.volume = 1;
 
     try {
-      await videoEl.play();
+      await video.play();
       unmuteBtn.classList.add("hidden");
     } catch (_) {
-      videoEl.muted = true;
+      video.muted = true;
       try {
-        await videoEl.play();
+        await video.play();
         unmuteBtn.classList.remove("hidden");
       } catch (err) {
         console.error("Video play failed:", err);
@@ -101,22 +114,42 @@
     }
   }
 
-  function pauseVideo() {
-    if (!videoEl) return;
-    videoPlane.setAttribute("visible", false);
-    videoEl.pause();
-    videoEl.currentTime = 0;
-    unmuteBtn.classList.add("hidden");
-  }
-
   function buildScene(cfg) {
+    const targets = cfg.targets || [];
+    if (!targets.length || !cfg.mindFile) {
+      throw new Error("No AR targets configured");
+    }
+
     const mindUrl = cacheBust(cfg.mindFile);
-    const videoUrl = cacheBust(cfg.video);
+    const assetsVideos = targets
+      .map(
+        (t, i) =>
+          `<video id="ar-video-${i}" src="${cacheBust(t.video)}" preload="auto" loop playsinline webkit-playsinline crossorigin="anonymous"></video>`
+      )
+      .join("");
+
+    const targetEntities = targets
+      .map(
+        (t, i) => `
+        <a-entity id="image-target-${i}" mindar-image-target="targetIndex: ${i}">
+          <a-plane
+            id="video-plane-${i}"
+            width="${t.planeWidth}"
+            height="${t.planeHeight}"
+            position="0 0 0.01"
+            rotation="0 0 0"
+            visible="false"
+            material="shader: flat; src: #ar-video-${i}; transparent: false"
+            ar-video-texture
+          ></a-plane>
+        </a-entity>`
+      )
+      .join("");
 
     arContainer.innerHTML = `
       <a-scene
         id="ar-scene"
-        mindar-image="imageTargetSrc: ${mindUrl}; autoStart: false; filterMinCF: 0.001; filterBeta: 10; warmupTolerance: 5; missTolerance: 10; uiLoading: no; uiScanning: no; uiError: no;"
+        mindar-image="imageTargetSrc: ${mindUrl}; autoStart: false; filterMinCF: 0.001; filterBeta: 10; warmupTolerance: 5; missTolerance: 10; uiLoading: no; uiScanning: no; uiError: no; maxTrack: ${targets.length};"
         embedded
         color-space="sRGB"
         renderer="alpha: true; antialias: true; premultipliedAlpha: false"
@@ -124,61 +157,25 @@
         vr-mode-ui="enabled: false"
         device-orientation-permission-ui="enabled: false"
       >
-        <a-assets timeout="10000">
-          <video
-            id="ar-video"
-            src="${videoUrl}"
-            preload="auto"
-            loop
-            playsinline
-            webkit-playsinline
-            crossorigin="anonymous"
-          ></video>
-        </a-assets>
+        <a-assets timeout="10000">${assetsVideos}</a-assets>
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-        <a-entity id="image-target" mindar-image-target="targetIndex: 0">
-          <a-plane
-            id="video-plane"
-            width="${cfg.planeWidth}"
-            height="${cfg.planeHeight}"
-            position="0 0 0.01"
-            rotation="0 0 0"
-            visible="false"
-            material="shader: flat; src: #ar-video; transparent: false"
-            ar-video-texture
-          ></a-plane>
-        </a-entity>
+        ${targetEntities}
       </a-scene>
     `;
 
     arScene = document.getElementById("ar-scene");
-    imageTarget = document.getElementById("image-target");
-    videoPlane = document.getElementById("video-plane");
-    videoEl = document.getElementById("ar-video");
+    videoEls.length = 0;
+    videoPlanes.length = 0;
 
-    bindSceneEvents();
-  }
-
-  function bindSceneEvents() {
-    imageTarget.addEventListener("targetFound", () => {
-      if (!arStarted) return;
-      scannerUi.classList.add("hidden");
-      foundBadge.classList.remove("hidden");
-      playVideoWithSound();
-    });
-
-    imageTarget.addEventListener("targetLost", () => {
-      scannerUi.classList.remove("hidden");
-      foundBadge.classList.add("hidden");
-      scannerStatus.textContent = "Target lost — scan again…";
-      pauseVideo();
+    targets.forEach((_, i) => {
+      videoEls.push(document.getElementById(`ar-video-${i}`));
+      videoPlanes.push(document.getElementById(`video-plane-${i}`));
+      bindTargetEvents(i);
     });
 
     arScene.addEventListener("arReady", () => {
       ensureCameraVisible();
-      if (arStarted) {
-        scannerStatus.textContent = "Scanning for target…";
-      }
+      if (arStarted) scannerStatus.textContent = "Scanning for target…";
     });
 
     arScene.addEventListener("arError", (event) => {
@@ -187,6 +184,23 @@
       startBtn.disabled = false;
       startBtn.textContent = "Start Scanner";
       console.error("MindAR error:", event.detail);
+    });
+  }
+
+  function bindTargetEvents(index) {
+    const entity = document.getElementById(`image-target-${index}`);
+    entity.addEventListener("targetFound", () => {
+      if (!arStarted) return;
+      scannerUi.classList.add("hidden");
+      foundBadge.classList.remove("hidden");
+      playVideoAt(index);
+    });
+    entity.addEventListener("targetLost", () => {
+      if (activeTargetIndex !== index) return;
+      scannerUi.classList.remove("hidden");
+      foundBadge.classList.add("hidden");
+      scannerStatus.textContent = "Target lost — scan again…";
+      pauseAllVideos();
     });
   }
 
@@ -200,8 +214,7 @@
     arStarted = true;
     setAppHeight();
 
-    await unlockAudio();
-    videoPlane.setAttribute("material", "shader: flat; src: #ar-video; transparent: false");
+    await unlockAllVideos();
 
     const startMindAR = () => getArSystem()?.start();
     if (arScene.hasLoaded) {
@@ -212,11 +225,12 @@
   }
 
   unmuteBtn.addEventListener("click", async () => {
-    videoEl.muted = false;
-    videoEl.volume = 1;
+    if (activeTargetIndex === null) return;
+    const video = videoEls[activeTargetIndex];
+    video.muted = false;
+    video.volume = 1;
     try {
-      await videoEl.play();
-      audioUnlocked = true;
+      await video.play();
       unmuteBtn.classList.add("hidden");
     } catch (_) {
       showToast("Tap again to enable sound.");
@@ -230,14 +244,15 @@
       const res = await fetch("/api/config");
       if (!res.ok) throw new Error("Config unavailable");
       config = await res.json();
+      if (!config.targets?.length) throw new Error("No targets configured");
       buildScene(config);
       loadingScreen.classList.add("hidden");
       startScreen.classList.remove("hidden");
     } catch (err) {
       console.error(err);
       loadingScreen.querySelector(".start-desc").textContent =
-        "Failed to load. Run npm start and open http://localhost:3000";
-      showToast("Could not load AR config. Use npm start to run the server.");
+        "Failed to load AR content. Check admin panel has targets.";
+      showToast("Could not load AR config.");
     }
   }
 
