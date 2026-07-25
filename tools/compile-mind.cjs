@@ -59,7 +59,7 @@ async function compileMindMulti(imagePaths, outputPath) {
   });
 
   try {
-    const executablePath = ensureChrome();
+    const executablePath = await ensureChrome();
     const puppeteer = require("puppeteer");
     const browser = await puppeteer.launch({
       headless: true,

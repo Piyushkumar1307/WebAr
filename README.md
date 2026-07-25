@@ -193,7 +193,7 @@ Adding targets in the admin panel compiles a `.mind` file via **Puppeteer + Chro
 
 1. Use the included `render.yaml` (build installs Chrome automatically), **or** set your build command to:
    ```bash
-   npm install && npx puppeteer browsers install chrome
+   npm install --ignore-scripts && node scripts/ensure-chrome.cjs
    ```
 2. Set `PUPPETEER_CACHE_DIR` as above so Chrome is stored inside the project and available at runtime.
 3. After updating Puppeteer settings, do **Manual Deploy → Clear build cache & deploy** once so Chrome is reinstalled.

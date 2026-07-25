@@ -6,12 +6,11 @@
   "scripts": {
     "start": "node server.js",
     "serve": "node server.js",
-    "postinstall": "node scripts/ensure-chrome.cjs",
     "compile-target": "node tools/compile-target.cjs",
     "migrate-cloudinary": "node tools/migrate-cloudinary.cjs"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   },
   "author": "",
   "license": "ISC",

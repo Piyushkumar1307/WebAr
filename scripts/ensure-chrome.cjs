@@ -1,50 +1,87 @@
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
 
 const ROOT = path.join(__dirname, "..");
-const cacheDir =
-  process.env.PUPPETEER_CACHE_DIR || path.join(ROOT, ".cache", "puppeteer");
 
-function getExecutablePath() {
-  try {
-    const puppeteer = require("puppeteer");
-    return puppeteer.executablePath();
-  } catch {
-    return null;
-  }
+function getCacheDir() {
+  const cacheDir =
+    process.env.PUPPETEER_CACHE_DIR || path.join(ROOT, ".cache", "puppeteer");
+  process.env.PUPPETEER_CACHE_DIR = cacheDir;
+  return cacheDir;
 }
 
-function ensureChrome() {
-  const exe = getExecutablePath();
-  if (exe && fs.existsSync(exe)) {
+async function ensureChrome() {
+  const cacheDir = getCacheDir();
+  fs.mkdirSync(cacheDir, { recursive: true });
+
+  const {
+    Browser,
+    computeExecutablePath,
+    detectBrowserPlatform,
+    getInstalledBrowsers,
+    install,
+    resolveBuildId,
+  } = require("@puppeteer/browsers");
+  const { PUPPETEER_REVISIONS } = require("puppeteer-core/internal/revisions.js");
+
+  const platform = detectBrowserPlatform();
+  if (!platform) {
+    throw new Error("Unsupported platform for Puppeteer");
+  }
+
+  const buildId = await resolveBuildId(
+    Browser.CHROME,
+    platform,
+    PUPPETEER_REVISIONS.chrome
+  );
+
+  const exe = computeExecutablePath({
+    browser: Browser.CHROME,
+    cacheDir,
+    buildId,
+  });
+
+  if (fs.existsSync(exe)) {
     return exe;
   }
 
-  console.log("[puppeteer] Chrome not found — installing to", cacheDir);
-  fs.mkdirSync(cacheDir, { recursive: true });
+  console.log("[puppeteer] Installing Chrome to", cacheDir);
 
-  execSync("npx puppeteer browsers install chrome", {
-    cwd: ROOT,
-    stdio: "inherit",
-    env: { ...process.env, PUPPETEER_CACHE_DIR: cacheDir },
+  await install({
+    browser: Browser.CHROME,
+    cacheDir,
+    platform,
+    buildId,
+    downloadProgressCallback: (downloaded, total) => {
+      if (!total) return;
+      const pct = Math.round((downloaded / total) * 100);
+      process.stdout.write(`\r[puppeteer] Downloading Chrome… ${pct}%`);
+    },
   });
 
-  const installed = getExecutablePath();
-  if (!installed || !fs.existsSync(installed)) {
-    throw new Error(
-      "Chrome install finished but executable was not found. " +
-        "On Render: redeploy with “Clear build cache”, and ensure buildCommand runs " +
-        "`npx puppeteer browsers install chrome`."
-    );
+  process.stdout.write("\n");
+
+  if (fs.existsSync(exe)) {
+    console.log("[puppeteer] Chrome ready at", exe);
+    return exe;
   }
 
-  console.log("[puppeteer] Chrome ready at", installed);
-  return installed;
+  const installed = await getInstalledBrowsers({ cacheDir });
+  throw new Error(
+    `Chrome install finished but executable was not found at ${exe}. ` +
+      `Installed browsers: ${JSON.stringify(installed)}`
+  );
 }
 
 if (require.main === module) {
-  ensureChrome();
+  ensureChrome()
+    .then((exe) => {
+      console.log("[puppeteer] OK:", exe);
+    })
+    .catch((err) => {
+      console.error("[puppeteer] FAILED:", err.message);
+      process.exit(1);
+    });
 }
 
-module.exports = { ensureChrome, cacheDir };
+module.exports = { ensureChrome, getCacheDir };
