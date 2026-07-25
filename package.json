@@ -9,7 +9,9 @@
     "compile-target": "node tools/compile-target.cjs",
     "migrate-cloudinary": "node tools/migrate-cloudinary.cjs"
   },
-  "keywords": [],
+  "engines": {
+    "node": ">=18"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {

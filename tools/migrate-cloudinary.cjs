@@ -17,7 +17,10 @@ async function migrate() {
 
   const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
   if (config.targetImage?.startsWith("http")) {
-    console.log("Already using Cloudinary URLs.");
+    console.log("Already using Cloudinary URLs — syncing config file to Cloudinary…");
+    const configStore = require("../lib/config-store");
+    await configStore.writeConfig(config);
+    console.log("Config synced to Cloudinary (webar/config).");
     return;
   }
 
@@ -51,6 +54,12 @@ async function migrate() {
   config.updatedAt = new Date().toISOString();
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
   console.log("Done. config.json updated.");
+
+  if (cloudinary.isConfigured()) {
+    const configStore = require("../lib/config-store");
+    await configStore.writeConfig(config);
+    console.log("Config synced to Cloudinary (webar/config).");
+  }
 }
 
 migrate().catch((err) => {

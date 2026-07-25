@@ -7,33 +7,31 @@ const multer = require("multer");
 const session = require("express-session");
 const { compileMind } = require("./tools/compile-mind.cjs");
 const cloudinary = require("./lib/cloudinary-storage");
+const configStore = require("./lib/config-store");
 
 const ROOT = __dirname;
-const CONFIG_PATH = path.join(ROOT, "data", "config.json");
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 const PORT = process.env.PORT || 3000;
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "webar-admin-secret-change-me",
     resave: false,
     saveUninitialized: false,
-    cookie: { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 },
+    cookie: {
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000,
+      secure: IS_PRODUCTION,
+      sameSite: "lax",
+    },
   })
 );
-
-function readConfig() {
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
-}
-
-function writeConfig(config) {
-  config.updatedAt = new Date().toISOString();
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
-}
 
 function imageDimensions(buf) {
   if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e) {
@@ -70,14 +68,23 @@ function requireAdmin(req, res, next) {
 function requireCloudinary(_req, res, next) {
   if (!cloudinary.isConfigured()) {
     return res.status(503).json({
-      error: "Cloudinary not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in .env",
+      error: "Cloudinary not configured. Set CLOUDINARY_* environment variables on Render.",
     });
   }
   next();
 }
 
-app.get("/api/config", (_req, res) => {
-  res.json(readConfig());
+app.get("/health", (_req, res) => {
+  res.json({ ok: true, cloudinary: cloudinary.isConfigured() });
+});
+
+app.get("/api/config", async (_req, res) => {
+  try {
+    res.json(await configStore.readConfig());
+  } catch (err) {
+    console.error("Config read error:", err);
+    res.status(500).json({ error: "Failed to load config" });
+  }
 });
 
 app.post("/api/admin/login", (req, res) => {
@@ -93,12 +100,16 @@ app.post("/api/admin/logout", requireAdmin, (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
-app.get("/api/admin/status", (req, res) => {
-  res.json({
-    authenticated: !!req.session?.admin,
-    cloudinary: cloudinary.isConfigured(),
-    config: readConfig(),
-  });
+app.get("/api/admin/status", async (req, res) => {
+  try {
+    res.json({
+      authenticated: !!req.session?.admin,
+      cloudinary: cloudinary.isConfigured(),
+      config: await configStore.readConfig(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post(
@@ -132,12 +143,12 @@ app.post(
         cloudinary.uploadMind(fs.readFileSync(tmpMind), "targets"),
       ]);
 
-      const config = readConfig();
+      const config = await configStore.readConfig();
       config.targetImage = imageResult.secure_url;
       config.mindFile = mindResult.secure_url;
       config.planeWidth = planeWidth;
       config.planeHeight = planeHeight;
-      writeConfig(config);
+      await configStore.writeConfig(config);
 
       res.json({
         ok: true,
@@ -169,9 +180,9 @@ app.post(
 
       const result = await cloudinary.uploadVideo(req.file.buffer, "ar-video");
 
-      const config = readConfig();
+      const config = await configStore.readConfig();
       config.video = result.secure_url;
-      writeConfig(config);
+      await configStore.writeConfig(config);
 
       res.json({ ok: true, config, message: "Video uploaded to Cloudinary successfully" });
     } catch (err) {
@@ -183,23 +194,38 @@ app.post(
 
 app.use(express.static(ROOT));
 
-const server = app.listen(PORT, () => {
-  console.log(`WebAR server running at http://localhost:${PORT}`);
-  console.log(`Admin panel: http://localhost:${PORT}/admin/`);
-  console.log(`Admin password: ${ADMIN_PASSWORD} (set ADMIN_PASSWORD env to change)`);
-  if (cloudinary.isConfigured()) {
-    console.log(`Cloudinary: connected (cloud: ${process.env.CLOUDINARY_CLOUD_NAME})`);
-  } else {
-    console.warn("Cloudinary: NOT configured — uploads will fail until .env is set");
+async function start() {
+  try {
+    await configStore.readConfig();
+    if (cloudinary.isConfigured()) {
+      const config = await configStore.readConfig();
+      await configStore.writeConfig(config);
+      console.log("Config synced to Cloudinary");
+    }
+  } catch (err) {
+    console.warn("Startup config sync warning:", err.message);
   }
-});
 
-server.on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
-    console.error(`\nPort ${PORT} is already in use. Either:`);
-    console.error(`  1. Stop the other process: lsof -ti:${PORT} | xargs kill -9`);
-    console.error(`  2. Use a different port: PORT=3001 npm start\n`);
-    process.exit(1);
-  }
-  throw err;
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`WebAR server running on port ${PORT}`);
+    console.log(`Admin panel: /admin/`);
+    if (cloudinary.isConfigured()) {
+      console.log(`Cloudinary: connected (cloud: ${process.env.CLOUDINARY_CLOUD_NAME})`);
+    } else {
+      console.warn("Cloudinary: NOT configured");
+    }
+  });
+
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`Port ${PORT} is already in use.`);
+      process.exit(1);
+    }
+    throw err;
+  });
+}
+
+start().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
 });
