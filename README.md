@@ -203,5 +203,17 @@ If uploads fail with “Could not find Chrome”, clear the build cache and rede
 After deploy:
 - Scanner: `https://your-app.onrender.com/`
 - Admin: `https://your-app.onrender.com/admin/`
+- Health (for cron / uptime monitors): `GET https://your-app.onrender.com/health` or `GET /api/health`
+
+Example cron job (e.g. [cron-job.org](https://cron-job.org), UptimeRobot) — ping every 10 minutes to keep free-tier services awake:
+
+```
+GET https://your-app.onrender.com/health
+```
+
+Response:
+```json
+{ "ok": true, "status": "healthy", "cloudinary": true, "uptime": 3600, "timestamp": "2026-07-25T06:00:00.000Z" }
+```
 
 A `render.yaml` is included for one-click Render deployment.

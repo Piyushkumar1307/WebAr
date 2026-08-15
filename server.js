@@ -46,8 +46,22 @@ function requireCloudinary(_req, res, next) {
   next();
 }
 
+function healthPayload() {
+  return {
+    ok: true,
+    status: "healthy",
+    cloudinary: cloudinary.isConfigured(),
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  };
+}
+
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, cloudinary: cloudinary.isConfigured() });
+  res.json(healthPayload());
+});
+
+app.get("/api/health", (_req, res) => {
+  res.json(healthPayload());
 });
 
 app.get("/api/config", async (_req, res) => {
