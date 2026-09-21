@@ -131,15 +131,15 @@
     const targetEntities = targets
       .map(
         (t, i) => `
-        <a-entity id="image-target-${i}" mindar-image-target="targetIndex: ${i}">
+        <a-entity id="image-target-${i}" mindar-image-target="targetIndex: ${i}" smooth-anchor>
           <a-plane
             id="video-plane-${i}"
             width="${t.planeWidth}"
             height="${t.planeHeight}"
-            position="0 0 0.01"
+            position="0 0 0.02"
             rotation="0 0 0"
             visible="false"
-            material="shader: flat; src: #ar-video-${i}; transparent: false"
+            material="shader: flat; src: #ar-video-${i}; transparent: false; side: double"
             ar-video-texture
           ></a-plane>
         </a-entity>`
@@ -149,7 +149,7 @@
     arContainer.innerHTML = `
       <a-scene
         id="ar-scene"
-        mindar-image="imageTargetSrc: ${mindUrl}; autoStart: false; filterMinCF: 0.001; filterBeta: 10; warmupTolerance: 5; missTolerance: 10; uiLoading: no; uiScanning: no; uiError: no; maxTrack: ${targets.length};"
+        mindar-image="imageTargetSrc: ${mindUrl}; autoStart: false; filterMinCF: 0.0005; filterBeta: 40; warmupTolerance: 8; missTolerance: 12; uiLoading: no; uiScanning: no; uiError: no; maxTrack: ${targets.length};"
         embedded
         color-space="sRGB"
         renderer="alpha: true; antialias: true; premultipliedAlpha: false"
