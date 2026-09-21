@@ -131,17 +131,19 @@
     const targetEntities = targets
       .map(
         (t, i) => `
-        <a-entity id="image-target-${i}" mindar-image-target="targetIndex: ${i}" smooth-anchor>
-          <a-plane
-            id="video-plane-${i}"
-            width="${t.planeWidth}"
-            height="${t.planeHeight}"
-            position="0 0 0.02"
-            rotation="0 0 0"
-            visible="false"
-            material="shader: flat; src: #ar-video-${i}; transparent: false; side: double"
-            ar-video-texture
-          ></a-plane>
+        <a-entity id="image-target-${i}" mindar-image-target="targetIndex: ${i}">
+          <a-entity id="video-holder-${i}" stable-video="damping: 0.15">
+            <a-plane
+              id="video-plane-${i}"
+              width="${t.planeWidth}"
+              height="${t.planeHeight}"
+              position="0 0 0.03"
+              rotation="0 0 0"
+              visible="false"
+              material="shader: flat; src: #ar-video-${i}; transparent: false; side: double"
+              ar-video-texture
+            ></a-plane>
+          </a-entity>
         </a-entity>`
       )
       .join("");

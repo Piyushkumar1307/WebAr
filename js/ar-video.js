@@ -18,9 +18,9 @@ AFRAME.registerComponent("ar-video-texture", {
   },
 });
 
-AFRAME.registerComponent("smooth-anchor", {
+AFRAME.registerComponent("stable-video", {
   schema: {
-    factor: { type: "number", default: 0.2 },
+    damping: { type: "number", default: 0.12 },
   },
   init: function () {
     this.rawPosition = new AFRAME.THREE.Vector3();
@@ -32,8 +32,8 @@ AFRAME.registerComponent("smooth-anchor", {
     this.rawPosition.copy(this.el.object3D.position);
     this.rawQuaternion.copy(this.el.object3D.quaternion);
 
-    this.smoothedPosition.lerp(this.rawPosition, this.data.factor);
-    this.smoothedQuaternion.slerp(this.rawQuaternion, this.data.factor);
+    this.smoothedPosition.lerp(this.rawPosition, this.data.damping);
+    this.smoothedQuaternion.slerp(this.rawQuaternion, this.data.damping);
 
     this.el.object3D.position.copy(this.smoothedPosition);
     this.el.object3D.quaternion.copy(this.smoothedQuaternion);
