@@ -126,10 +126,12 @@ app.post(
       if (!targetFile) return res.status(400).json({ error: "Target image is required" });
       if (!videoFile) return res.status(400).json({ error: "Video is required" });
 
-      const allowedImg = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+      // MindAR's server-side target compiler in this project supports PNG and JPEG.
+      // Keep this in sync with the file input in admin/index.html.
+      const allowedImg = ["image/png", "image/jpeg", "image/jpg"];
       const allowedVid = ["video/mp4", "video/webm", "video/quicktime"];
       if (!allowedImg.includes(targetFile.mimetype)) {
-        return res.status(400).json({ error: "Upload a PNG or JPG image" });
+        return res.status(400).json({ error: "Upload a PNG or JPG target image" });
       }
       if (!allowedVid.includes(videoFile.mimetype)) {
         return res.status(400).json({ error: "Upload an MP4 or WebM video" });

@@ -4,8 +4,12 @@ services:
     runtime: node
     plan: free
     buildCommand: npm install --ignore-scripts
-    startCommand: node server.js
+    # Use the package script so Node receives the safe heap limit used by the
+    # image-target compiler. This must not be replaced with `node server.js`.
+    startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=384

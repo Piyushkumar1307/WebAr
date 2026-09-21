@@ -1,23 +1,40 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
-import { loadImage } from "@napi-rs/canvas";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { OfflineCompiler } from "./offline-compiler.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
+// The MindAR compiler creates several image pyramids in JavaScript. Limiting
+// compiler inputs prevents a large poster photo from exhausting small hosts
+// (such as Render's free instance) while retaining enough detail for tracking.
+const MAX_COMPILER_IMAGE_DIMENSION = 768;
+
+async function loadCompilerImage(filePath) {
+  const image = await loadImage(filePath);
+  const largestDimension = Math.max(image.width, image.height);
+  if (largestDimension <= MAX_COMPILER_IMAGE_DIMENSION) return image;
+
+  const scale = MAX_COMPILER_IMAGE_DIMENSION / largestDimension;
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+  const canvas = createCanvas(width, height);
+  canvas.getContext("2d").drawImage(image, 0, 0, width, height);
+  console.log(`[compile] Resized ${path.basename(filePath)} to ${width}×${height} for compilation`);
+  return canvas;
+}
 
 export async function compileMindMulti(imagePaths, outputPath) {
   const paths = Array.isArray(imagePaths) ? imagePaths : [imagePaths];
   console.log("[compile] Loading", paths.length, "image(s)…");
 
-  const images = await Promise.all(
-    paths.map(async (p) => {
-      const abs = path.resolve(p);
-      if (!fs.existsSync(abs)) throw new Error(`Image not found: ${abs}`);
-      return loadImage(abs);
-    })
-  );
+  const images = [];
+  for (const p of paths) {
+    const abs = path.resolve(p);
+    if (!fs.existsSync(abs)) throw new Error(`Image not found: ${abs}`);
+    images.push(await loadCompilerImage(abs));
+  }
 
   console.log("[compile] Compiling .mind (CPU, ~30–90s)…");
   const compiler = new OfflineCompiler();

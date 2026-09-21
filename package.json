@@ -4,12 +4,12 @@
   "description": "WebAR image tracking with admin panel",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "serve": "node server.js",
-    "compile-target": "node tools/compile-target.cjs",
-    "migrate-cloudinary": "node tools/migrate-cloudinary.cjs",
-    "sync-config": "node tools/sync-config.cjs",
-    "rebuild-config": "node tools/rebuild-from-cloudinary.cjs"
+    "start": "NODE_OPTIONS=--max-old-space-size=384 node server.js",
+    "serve": "NODE_OPTIONS=--max-old-space-size=384 node server.js",
+    "compile-target": "NODE_OPTIONS=--max-old-space-size=384 node tools/compile-target.cjs",
+    "migrate-cloudinary": "NODE_OPTIONS=--max-old-space-size=4096 node tools/migrate-cloudinary.cjs",
+    "sync-config": "NODE_OPTIONS=--max-old-space-size=4096 node tools/sync-config.cjs",
+    "rebuild-config": "NODE_OPTIONS=--max-old-space-size=4096 node tools/rebuild-from-cloudinary.cjs"
   },
   "engines": {
     "node": "20.x"

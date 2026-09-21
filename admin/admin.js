@@ -186,6 +186,16 @@
 
   addTargetInput.addEventListener("change", () => {
     pendingTarget = addTargetInput.files[0] || null;
+    if (pendingTarget && !["image/png", "image/jpeg"].includes(pendingTarget.type)) {
+      pendingTarget = null;
+      addTargetInput.value = "";
+      addTargetLabel.textContent = "Choose a PNG or JPG image";
+      addTargetPreview.removeAttribute("src");
+      addTargetPreview.classList.add("hidden");
+      setStatus(addStatus, "Target images must be PNG or JPG.", "err");
+      updateAddSubmitState();
+      return;
+    }
     addTargetLabel.textContent = pendingTarget ? pendingTarget.name : "No file chosen";
     if (pendingTarget) {
       addTargetPreview.src = URL.createObjectURL(pendingTarget);

@@ -66,7 +66,7 @@ On **mobile**, tap the ☰ menu to open the sidebar as a slide-out drawer. On **
 1. Sign in to the admin panel
 2. Tap **+ Add target** in the sidebar
 3. Enter an optional **name** (e.g. "AYZEN Poster")
-4. Choose a **target image** (PNG, JPG, or WebP — high contrast works best)
+4. Choose a **target image** (PNG or JPG — high contrast works best)
 5. Choose an **AR video** (MP4, WebM, or MOV)
 6. Tap **Add target & video**
 
@@ -173,6 +173,10 @@ Video plane size is calculated automatically from the target image aspect ratio 
 ## Deploy
 
 This app requires a **Node.js server** (Express) — it is not a static-only site. Deploy to [Render](https://render.com), Railway, Fly.io, or any Node host.
+
+For Render, keep the service Start Command as `npm start`. The compiler needs
+the Node heap setting in that script; starting it as `node server.js` can make
+uploads fail with a JavaScript heap out-of-memory error.
 
 **HTTPS is required** for camera access on mobile.
 
